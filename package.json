@@ -1,0 +1,31 @@
+{
+  "name": "claude-monitoring",
+  "productName": "클로드 모니터링",
+  "version": "0.1.0",
+  "description": "Claude Code 로컬 세션 모니터 (트레이 위젯, 토큰 미사용)",
+  "main": "main.js",
+  "private": true,
+  "author": "김지니 <allie7019@naver.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jiny-01/claude_monitoring.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "icon": "node gen-icon.js",
+    "dist": "electron-builder --win nsis portable"
+  },
+  "build": {
+    "appId": "com.jiny.claude-monitoring",
+    "productName": "클로드 모니터링",
+    "directories": { "output": "dist" },
+    "files": ["main.js", "preload.js", "renderer.js", "index.html", "iconlib.js", "titles.js", "icon.ico", "package.json"],
+    "extraResources": [{ "from": "statusline.js", "to": "statusline.js" }],
+    "win": { "icon": "icon.ico" },
+    "nsis": { "oneClick": true, "perMachine": false }
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  }
+}
