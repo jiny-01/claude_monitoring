@@ -29,7 +29,6 @@ function hintLines(s) {
   const cut = (t) => (t.length > 46 ? t.slice(0, 46) + '…' : t);
   const rows = [];
   if (s.last) rows.push(`<div class="hint2" title="${esc(s.last)}"><b>최근 요청</b> ${esc(cut(s.last))}</div>`);
-  if (s.first && s.first !== s.last) rows.push(`<div class="hint2" title="${esc(s.first)}"><b>첫 요청</b> ${esc(cut(s.first))}</div>`);
   return rows.join('');
 }
 
@@ -47,6 +46,13 @@ function gitLine(s) {
   return parts.join(' · ');
 }
 
+function ctxText(s) {
+  if (typeof s.ctx !== 'number') return '';
+  const p = Math.round(s.ctx);
+  const cls = p >= 85 ? 'hot' : p >= 70 ? 'warn' : '';
+  return ` · 컨텍스트 <span class="ctx ${cls}" title="${esc(s.model || '')}">${p}%</span>`;
+}
+
 function card(s) {
   const k = kind(s);
   const label = LABEL[s.status] || '작업 중';
@@ -54,7 +60,7 @@ function card(s) {
   return `<div class="card ${k}">
     <span class="badge"></span>
     <div class="info">
-      <div class="meta"><span class="state">${esc(label)}</span> · ${ago(s.updatedAt)}</div>
+      <div class="meta"><span class="state">${esc(label)}</span> · ${ago(s.updatedAt)}${ctxText(s)}</div>
       <div class="name${s.titleReal === false ? ' untitled' : ''}" data-sid="${esc(s.sessionId)}" title="${s.titleReal === false ? '제목 없음 · ' : ''}더블클릭해서 제목 지정 · 별칭 ${esc(s.name)}">${esc(s.title || s.name)}</div>
         ${hintLines(s)}
         <div class="meta git">${gitLine(s)}</div>
@@ -74,6 +80,7 @@ function tickClock() {
   const d = new Date();
   const t = d.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit', hour12: true });
   $('synced').innerHTML = esc(t) + '<br>' + esc(d.toLocaleDateString('sv-SE'));
+  if (typeof renderUsage === 'function') renderUsage();
 }
 setInterval(() => { if (typeof tickClock === 'function') tickClock(); }, 5000);
 
@@ -207,6 +214,32 @@ $('list').addEventListener('dblclick', (e) => {
   });
   input.addEventListener('blur', () => done(true));
 });
+
+// 5시간·주간 한도 (statusLine 입력의 rate_limits, Pro/Max)
+let usage = null;
+function until(ms) {
+  const m = Math.max(0, Math.round((ms - Date.now()) / 60000));
+  if (m < 60) return m + '분';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + '시간 ' + (m % 60) + '분';
+  return Math.floor(h / 24) + '일 ' + (h % 24) + '시간';
+}
+function renderUsage() {
+  const el = $('usage');
+  if (!usage || (!usage.five && !usage.week)) {
+    el.innerHTML = '<div class="u-empty">사용량 정보 대기 중 (세션이 응답하면 표시돼요)</div>';
+    return;
+  }
+  const row = (label, w) => {
+    const p = Math.round(w.pct);
+    const cls = p >= 85 ? 'hot' : p >= 60 ? 'warn' : '';
+    return `<div class="u-row"><span class="t">${label}</span><span class="p">${p}%</span>
+      <div class="bar"><i class="${cls}" style="width:${Math.min(100, p)}%"></i></div>
+      <span class="r">${w.resets ? '초기화까지 ' + until(w.resets) : ''}</span></div>`;
+  };
+  el.innerHTML = (usage.five ? row('5시간 한도', usage.five) : '') + (usage.week ? row('주간 한도', usage.week) : '');
+}
+window.board.onUsage((u) => { usage = u; renderUsage(); });
 
 window.board.onSessions((list) => { sessions = list; render(); });
 setInterval(render, 30000);

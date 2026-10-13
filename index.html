@@ -73,6 +73,18 @@
   .meta .br.warn { color: var(--amber); font-weight: 700; }
   .meta .chg { color: var(--amber); font-weight: 600; }
   .meta .ok { color: var(--green); }
+  .usage { flex: none; border-top: 1px solid var(--line); padding: 8px 18px; display: grid; gap: 9px; }
+  .u-row { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; font-size: 12px; }
+  .u-row .t { color: var(--sub); font-weight: 600; }
+  .u-row .p { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .u-row .r { grid-column: 1 / -1; color: var(--sub); font-size: 11.5px; }
+  .bar { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: var(--gray-bg); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--green); border-radius: 3px; }
+  .bar i.warn { background: var(--amber); }
+  .bar i.hot { background: var(--red); }
+  .u-empty { color: var(--sub); font-size: 12px; }
+  .ctx.warn { color: var(--amber); font-weight: 600; }
+  .ctx.hot { color: var(--red); font-weight: 700; }
   .hint2 { color: var(--sub); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .hint2 b { color: var(--text); font-weight: 600; margin-right: 4px; }
   .name.untitled { color: var(--sub); font-weight: 600; }
@@ -119,6 +131,7 @@
     <div id="hint" class="hint"></div>
   </header>
   <main id="list"></main>
+  <div id="usage" class="usage"></div>
   <footer><span id="count"></span><span id="synced"></span></footer>
   <div id="toast"></div>
 

@@ -13,6 +13,7 @@ const H = 560;
 let win;
 let tray;
 let lastJson = '';
+let lastUsageJson = '';
 let lastList = [];
 
 // 핀 고정 상태·위치 저장 (userData/config.json)
@@ -97,6 +98,8 @@ function readSessions() {
     try {
       const s = JSON.parse(fs.readFileSync(path.join(DIR, f), 'utf8'));
       if (!s.pid || !alive(s.pid)) continue;
+      const st = readStatus(s.sessionId);
+      const cw = st && st.context_window;
       out.push({
         pid: s.pid,
         name: s.name || String(s.pid),
@@ -111,6 +114,8 @@ function readSessions() {
         })(),
         agents: runningSubagents(s.sessionId, s.status),
         git: gitInfo(s.cwd),
+        ctx: cw && typeof cw.used_percentage === 'number' ? cw.used_percentage : null,
+        model: (st && st.model && st.model.display_name) || '',
         status: s.status || 'unknown',
         cwd: s.cwd || '',
         startedAt: s.startedAt || 0,
@@ -125,6 +130,12 @@ function readSessions() {
 }
 
 function refresh() {
+  const usage = readUsage();
+  const uj = JSON.stringify(usage);
+  if (uj !== lastUsageJson) {
+    lastUsageJson = uj;
+    if (win && !win.isDestroyed()) win.webContents.send('usage', usage);
+  }
   lastList = readSessions();
   const json = JSON.stringify(lastList);
   if (json === lastJson) return;
@@ -168,7 +179,7 @@ function toggle() {
 
 // 트레이 아이콘: 모니터 모양, 화면 색 = 상태, 응답 필요 시 화면에 숫자 (렌더러에 의존하지 않음)
 const { pixels } = require('./iconlib');
-const { resolveTitle, runningSubagents, promptHints } = require('./titles');
+const { resolveTitle, runningSubagents, promptHints, readStatus, readUsage } = require('./titles');
 const APP_ICON = path.join(__dirname, 'icon.ico');
 
 function makeIcon(attn, run) {
@@ -286,6 +297,7 @@ app.whenReady().then(() => {
     saveCfg();
   });
   win.webContents.on('did-finish-load', () => {
+    lastUsageJson = '';
     refresh();
     win.webContents.send('sessions', lastList);
     if (cfg.pinned) {

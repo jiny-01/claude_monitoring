@@ -147,6 +147,8 @@ function appTitles() {
 // 표시 제목: 실제 제목이 있으면 그대로, 없으면 원래 별칭 그대로 (real=false)
 function resolveTitle(s) {
   if (s.nameSource === 'user' && s.name) return { title: s.name, real: true };
+  const st = readStatus(s.sessionId);
+  if (st && st.session_name) return { title: st.session_name, real: true };
   const app = appTitles().get(s.sessionId);
   if (app) return { title: app, real: true };
   const file = findFile(s.sessionId);
@@ -258,4 +260,47 @@ function runningSubagents(sessionId, status) {
   return out;
 }
 
-module.exports = { resolveTitle, runningSubagents, promptHints };
+// statusLine 수집기(statusline.js)가 저장한 세션별 입력 JSON
+const STATUS_DIR = path.join(process.env.LOCALAPPDATA || os.tmpdir(), 'claude-board', 'status');
+
+function readStatus(id) {
+  if (!id) return null;
+  try {
+    return JSON.parse(fs.readFileSync(path.join(STATUS_DIR, String(id).replace(/[^\w-]/g, '') + '.json'), 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+// 계정 단위 한도: 창(5시간/주간)별로 가장 최근에 갱신된 값을 쓰고, 이미 초기화된 창은 버린다
+function readUsage() {
+  let files = [];
+  try {
+    files = fs.readdirSync(STATUS_DIR).filter((f) => f.endsWith('.json'));
+  } catch {
+    return null;
+  }
+  const now = Date.now();
+  const best = {};
+  for (const f of files) {
+    let j;
+    try {
+      j = JSON.parse(fs.readFileSync(path.join(STATUS_DIR, f), 'utf8'));
+    } catch {
+      continue;
+    }
+    const rl = j.rate_limits;
+    if (!rl) continue;
+    for (const [key, name] of [['five_hour', 'five'], ['seven_day', 'week']]) {
+      const w = rl[key];
+      if (!w || typeof w.used_percentage !== 'number') continue;
+      const resets = Number(w.resets_at) * 1000;
+      if (resets && resets < now) continue;
+      const at = j._at || 0;
+      if (!best[name] || at > best[name].at) best[name] = { pct: w.used_percentage, resets, at };
+    }
+  }
+  return best.five || best.week ? best : null;
+}
+
+module.exports = { resolveTitle, runningSubagents, promptHints, readStatus, readUsage };

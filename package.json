@@ -13,7 +13,8 @@
   "scripts": {
     "start": "electron .",
     "icon": "node gen-icon.js",
-    "dist": "electron-builder --win nsis portable"
+    "dist": "electron-builder --win nsis portable",
+    "dist:simple": "electron-builder --win nsis portable --config.win.signAndEditExecutable=false"
   },
   "build": {
     "appId": "com.jiny.claude-monitoring",
